@@ -5,6 +5,7 @@ from app.config.database import SessionLocal
 from app.models.task import Task
 from app.schemas.task import TaskCreate, TaskUpdate
 from app.utils.dependencies import get_current_user
+from app.models.project import Project
 
 router = APIRouter(
     prefix="/tasks",
@@ -47,12 +48,16 @@ def update_task(
     current_user: dict = Depends(get_current_user)
 ):
 
-    task = db.query(Task).filter(
-        Task.id == task_id
+    task = db.query(Task).join(Task.project).filter(
+    Task.id == task_id,
+    Project.organization_id == current_user["organization_id"]
     ).first()
 
     if not task:
-        return {"message": "Task not found"}
+        raise HTTPException(
+        status_code=404,
+        detail="Task not found"
+        )
 
     task.status = task_data.status
 
@@ -68,6 +73,7 @@ def get_tasks(
     current_user: dict = Depends(get_current_user)
 ):
 
-    tasks = db.query(Task).all()
+    tasks = db.query(Task).join(Task.project).filter(
+    Project.organization_id == current_user["organization_id"]).all()
 
     return tasks
